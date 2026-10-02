@@ -1,0 +1,61 @@
+{
+    "name": "xve/laravel-paynl",
+    "description": "Laravel integration for Pay.nl online and terminal (instore) payments",
+    "keywords": ["xve", "laravel", "paynl", "pay.nl", "payments", "bancontact", "terminal"],
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Robbe",
+            "email": "robbe@xve.be",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/contracts": "^10.0||^11.0||^12.0||^13.0",
+        "illuminate/http": "^10.0||^11.0||^12.0||^13.0",
+        "illuminate/support": "^10.0||^11.0||^12.0||^13.0",
+        "paynl/php-sdk": "^2.0",
+        "spatie/laravel-package-tools": "^1.16"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.14",
+        "orchestra/testbench": "^8.0||^9.0||^10.0||^11.0",
+        "pestphp/pest": "^2.0||^3.0||^4.0",
+        "pestphp/pest-plugin-laravel": "^2.0||^3.0||^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Xve\\LaravelPaynl\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Xve\\LaravelPaynl\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest --exclude-group=sandbox --exclude-group=terminal",
+        "test:sandbox": "vendor/bin/pest --group=sandbox",
+        "test:terminal": [
+            "Composer\\Config::disableProcessTimeout",
+            "vendor/bin/pest --group=terminal"
+        ],
+        "format": "vendor/bin/pint"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Xve\\LaravelPaynl\\LaravelPaynlServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
