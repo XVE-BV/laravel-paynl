@@ -7,6 +7,7 @@ use PayNL\Sdk\Model\Request\OrderStatusRequest;
 use PayNL\Sdk\Model\Request\TerminalsBrowseRequest;
 use PayNL\Sdk\Model\Terminal as PayTerminal;
 use PayNL\Sdk\Model\Terminals;
+use Xve\LaravelPaynl\Exceptions\PaymentNotVerifiedException;
 use Xve\LaravelPaynl\Exceptions\PaynlException;
 use Xve\LaravelPaynl\Services\PaynlService;
 use Xve\LaravelPaynl\Support\PaymentStatus;
@@ -87,6 +88,30 @@ it('carries the reason the terminal stopped the payment', function () {
     expect($payment->status)->toBe(PaymentStatus::Cancelled)
         ->and($payment->failureReason)->toBe('Cancelled by user')
         ->and(paynlWith(fn () => payOrder(100))->getStatus('EX-1234-5678-9012')->failureReason)->toBeNull();
+});
+
+it('verifies a payment that is paid for the expected amount', function () {
+    $payment = paynlWith(fn () => payOrder(100, 12.10))->verifyPaid('EX-1234-5678-9012', 12.1);
+
+    expect($payment->isPaid())->toBeTrue()
+        ->and($payment->amount)->toBe(12.1);
+});
+
+it('does not verify a payment that is not paid', function () {
+    paynlWith(fn () => payOrder(-90))->verifyPaid('EX-1234-5678-9012', 12.1);
+})->throws(PaymentNotVerifiedException::class, 'not paid');
+
+it('does not verify a payment paid for another amount', function () {
+    try {
+        paynlWith(fn () => payOrder(100, 1.00))->verifyPaid('EX-1234-5678-9012', 12.1);
+    } catch (PaymentNotVerifiedException $e) {
+        expect($e->reason)->toBe(PaymentNotVerifiedException::AMOUNT_MISMATCH)
+            ->and($e->payment->amount)->toBe(1.0);
+
+        return;
+    }
+
+    $this->fail('A payment for another amount was verified.');
 });
 
 it('lists the terminals with a usable flag', function () {

@@ -47,8 +47,11 @@ $payment = $paynl->startOnlinePayment(25.00, 'Webshop', route('shop.done'), 'ORD
 redirect($payment->paymentUrl);
 
 $paynl->getStatus($payment->orderId);                            // Payment with a normalised PaymentStatus
+$paynl->verifyPaid($payment->orderId, 12.10);                     // Payment, or PaymentNotVerifiedException (reason: not_paid / amount_mismatch)
 $paynl->cancel($payment->orderId);
 ```
+
+Call `verifyPaid()` before booking anything: it asks Pay. itself instead of trusting a browser that says "paid".
 
 `PaymentStatus` is one of `pending`, `authorized`, `paid`, `cancelled`, `refunded`, `chargeback`. Every order carries the `stats` block (`object`, `tool`, `extra1`) Pay. needs for certification.
 

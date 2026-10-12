@@ -15,6 +15,7 @@ use PayNL\Sdk\Model\Terminals;
 use PayNL\Sdk\Request\RequestData;
 use PayNL\Sdk\Util\Exchange;
 use Throwable;
+use Xve\LaravelPaynl\Exceptions\PaymentNotVerifiedException;
 use Xve\LaravelPaynl\Exceptions\PaynlException;
 use Xve\LaravelPaynl\Support\Payment;
 use Xve\LaravelPaynl\Support\Terminal;
@@ -78,6 +79,29 @@ class PaynlService
     public function getStatus(string $orderId): Payment
     {
         return Payment::fromPayOrder($this->send(new OrderStatusRequest($orderId)));
+    }
+
+    /**
+     * The payment, once Pay. confirms it is paid for this amount. Check this before booking: a browser
+     * reporting "paid" is no proof.
+     *
+     * @throws PaymentNotVerifiedException when the order is not paid or paid for another amount
+     * @throws PaynlException when Pay. cannot be reached
+     */
+    public function verifyPaid(string $orderId, float $amount): Payment
+    {
+        $payment = $this->getStatus($orderId);
+
+        if (! $payment->isPaid()) {
+            throw PaymentNotVerifiedException::notPaid($payment);
+        }
+
+        // Half a cent of slack for float rounding; anything above that is a real difference
+        if (abs($payment->amount - round($amount, 2)) > 0.009) {
+            throw PaymentNotVerifiedException::amountMismatch($payment, $amount);
+        }
+
+        return $payment;
     }
 
     public function cancel(string $orderId): Payment
