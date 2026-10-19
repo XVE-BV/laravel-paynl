@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Xve\LaravelPaynl\Contracts;
 
-use PayNL\Sdk\Model\Request\OrderCreateRequest;
 use Xve\LaravelPaynl\Exceptions\PaymentNotVerifiedException;
 use Xve\LaravelPaynl\Exceptions\PaynlException;
+use Xve\LaravelPaynl\Support\OrderRequest;
 use Xve\LaravelPaynl\Support\Payment;
 use Xve\LaravelPaynl\Support\Terminal;
 
@@ -28,7 +28,7 @@ interface PaymentGateway
      * Sends the amount straight to the terminal; the customer pays there and the result
      * arrives through the exchange (or a status call).
      *
-     * @param  (callable(OrderCreateRequest): void)|null  $configure  extra order data (customer, products, ...)
+     * @param  (callable(OrderRequest): void)|null  $configure  extra order data (customer, products, ...)
      */
     public function startTerminalPayment(int $amount, string $terminalCode, string $description, string $reference = '', ?callable $configure = null): Payment;
 
@@ -40,7 +40,7 @@ interface PaymentGateway
     /**
      * Creates an online order; send the customer to the returned paymentUrl.
      *
-     * @param  (callable(OrderCreateRequest): void)|null  $configure  extra order data (customer, products, expire time, ...)
+     * @param  (callable(OrderRequest): void)|null  $configure  extra order data (customer, products, expire time, ...)
      */
     public function startOnlinePayment(int $amount, string $description, string $returnUrl, string $reference = '', ?int $paymentMethodId = null, ?callable $configure = null): Payment;
 

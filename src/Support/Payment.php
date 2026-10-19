@@ -11,10 +11,13 @@ use Throwable;
 
 final class Payment implements Arrayable, JsonSerializable
 {
+    private const APPROVED_INCIDENT = '0000';
+
     /**
      * @param  int  $amount  in cents
      * @param  ?string  $statusUrl  Pay.'s public status link (no credentials needed), for a kassa that polls itself
      * @param  int  $statusCode  the raw Pay. state code behind $status
+     * @param  ?Receipt  $receipt  the card receipt, once the terminal finished a payment or refund
      */
     public function __construct(
         public readonly string $orderId,
@@ -26,6 +29,7 @@ final class Payment implements Arrayable, JsonSerializable
         public readonly ?string $statusUrl = null,
         public readonly ?string $failureReason = null,
         public readonly int $statusCode = 0,
+        public readonly ?Receipt $receipt = null,
     ) {}
 
     public static function fromPayOrder(PayOrder $order): self
@@ -40,6 +44,7 @@ final class Payment implements Arrayable, JsonSerializable
         };
 
         $statusCode = $order->getStatusCode();
+        $payments = (array) $read(fn () => $order->getPayments(), []);
 
         return new self(
             orderId: (string) ($read(fn () => $order->getOrderId()) ?: $read(fn () => $order->getId(), '')),
@@ -49,8 +54,9 @@ final class Payment implements Arrayable, JsonSerializable
             reference: (string) $read(fn () => $order->getReference(), ''),
             paymentUrl: $read(fn () => $order->getPaymentUrl()) ?: null,
             statusUrl: $read(fn () => $order->getStatusUrl()) ?: null,
-            failureReason: self::failureReason((array) $read(fn () => $order->getPayments(), [])),
+            failureReason: self::failureReason($payments),
             statusCode: $statusCode,
+            receipt: Receipt::fromPay($read(fn () => $order->getReceipt()), $payments),
         );
     }
 
@@ -71,15 +77,21 @@ final class Payment implements Arrayable, JsonSerializable
             statusUrl: data_get($object, 'links.status') ?: null,
             failureReason: self::failureReason((array) ($object['payments'] ?? [])),
             statusCode: $statusCode,
+            receipt: Receipt::fromPay(is_string($object['receipt'] ?? null) ? $object['receipt'] : null, (array) ($object['payments'] ?? [])),
         );
     }
 
     /**
      * Why the terminal refused or stopped the payment (cancelled, timeout, busy, ...), as Pay. reports it.
+     * Incident 0000 ("AKKOORD") is the terminal approving the payment, not a failure.
      */
     private static function failureReason(array $payments): ?string
     {
         foreach (array_reverse($payments) as $payment) {
+            if ((string) data_get($payment, 'supplierData.incident_code') === self::APPROVED_INCIDENT) {
+                return null;
+            }
+
             $reason = data_get($payment, 'supplierData.incident_text') ?: data_get($payment, 'supplierData.incident_code');
             if (filled($reason)) {
                 return (string) $reason;
@@ -106,6 +118,7 @@ final class Payment implements Arrayable, JsonSerializable
             'paymentUrl' => $this->paymentUrl,
             'statusUrl' => $this->statusUrl,
             'failureReason' => $this->failureReason,
+            'receipt' => $this->receipt?->toArray(),
         ];
     }
 

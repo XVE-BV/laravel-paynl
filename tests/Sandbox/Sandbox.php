@@ -3,6 +3,8 @@
 namespace Xve\LaravelPaynl\Tests\Sandbox;
 
 use Dotenv\Dotenv;
+use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Assert as PHPUnit;
 use Xve\LaravelPaynl\Services\PaynlService;
 use Xve\LaravelPaynl\Support\Payment;
 
@@ -43,7 +45,7 @@ final class Sandbox
             'paynl.api_token' => self::env('PAYNL_SANDBOX_API_TOKEN'),
             'paynl.service_id' => self::env('PAYNL_SANDBOX_SERVICE_ID'),
             'paynl.testmode' => filter_var(self::env('PAYNL_SANDBOX_TESTMODE', 'true'), FILTER_VALIDATE_BOOL),
-            'paynl.stats.object' => self::env('PAYNL_SANDBOX_STATS_OBJECT', 'xve/laravel-paynl'),
+            'paynl.stats.object' => self::env('PAYNL_SANDBOX_STATS_OBJECT', PaynlService::PARTNER_ID),
             'paynl.stats.tool' => 'laravel-paynl sandbox tests',
         ]);
 
@@ -91,6 +93,72 @@ final class Sandbox
         } while (time() < $deadline);
 
         return $payment;
+    }
+
+    /**
+     * Reads Pay.'s own check of a certification test case from the sandbox payment page
+     * ("Testcase 5 - Passed 5/5, Mismatch 0/5, Missing 0/5") and fails on any field that did not pass.
+     */
+    public static function assertCertificationCase(Payment $payment, int $case): void
+    {
+        $html = Http::timeout(15)->get((string) $payment->paymentUrl)->throw()->body();
+
+        if (! preg_match('/Testcase\s+(\d+)/i', $html, $title)) {
+            PHPUnit::fail("No certification panel on {$payment->paymentUrl}: is integration.test on and the sandbox method used?");
+        }
+        PHPUnit::assertSame($case, (int) $title[1], "Pay. matched the order to test case {$title[1]}, not {$case}.");
+
+        // The summary: a green, orange and red dot, each followed by "<label> <count>/<total>"
+        preg_match_all('/bg-(green|orange|red)-400"><\/span>\s*<span[^>]*>\s*[^<\d]*(\d+)\/(\d+)/', $html, $summary, PREG_SET_ORDER);
+        $counts = collect($summary)->mapWithKeys(fn ($match) => [$match[1] => [(int) $match[2], (int) $match[3]]]);
+        PHPUnit::assertTrue($counts->has('green'), "No result summary for test case {$case} on {$payment->paymentUrl}.");
+
+        // Every field row has a dot: green passed, orange mismatch, red missing ("Name Received: x Expected: y")
+        preg_match_all('/<tr[^>]*>(.*?)<\/tr>/s', $html, $rows);
+        $failed = collect($rows[1])
+            ->filter(fn (string $row) => preg_match('/bg-(orange|red)-400/', $row))
+            ->map(fn (string $row) => trim((string) preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($row)))));
+
+        [$passed, $total] = $counts['green'];
+        self::say("Case {$case}: {$passed}/{$total} passed at Pay. ({$payment->paymentUrl})");
+
+        PHPUnit::assertTrue($passed === $total && $failed->isEmpty(), "Test case {$case} passed {$passed}/{$total} at Pay.: ".$failed->join(', '));
+    }
+
+    /**
+     * Adds a scenario result to the evidence Pay. asks for at the certification (references of a
+     * successful, failed, cancelled and refunded payment, stats.object, terminal, receipt), in
+     * build/paynl-certification.md (git-ignored). Add the screenshots of the kassa screens yourself.
+     */
+    public static function record(string $scenario, Payment $payment): void
+    {
+        $file = dirname(__DIR__, 2).'/build/paynl-certification.md';
+        if (! is_file($file)) {
+            @mkdir(dirname($file), 0755, true);
+            file_put_contents($file, implode(PHP_EOL, [
+                '# Pay. POS certification evidence',
+                '',
+                '- Sales location: '.config('paynl.service_id'),
+                '- Terminal: '.self::env('PAYNL_SANDBOX_TERMINAL'),
+                '- stats.object: '.config('paynl.stats.object'),
+                '',
+            ]));
+        }
+
+        $lines = [
+            '',
+            "## {$scenario} (".now()->toDateTimeString().')',
+            '',
+            "- Order: {$payment->orderId}",
+            '- Reference: '.($payment->reference ?: '-'),
+            "- Status: {$payment->status->value} ({$payment->statusCode})",
+            '- Failure reason: '.($payment->failureReason ?? '-'),
+        ];
+        if ($payment->receipt !== null) {
+            array_push($lines, '', '```', $payment->receipt->text(), '```');
+        }
+
+        file_put_contents($file, implode(PHP_EOL, $lines).PHP_EOL, FILE_APPEND);
     }
 
     /**

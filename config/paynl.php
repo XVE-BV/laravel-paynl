@@ -1,5 +1,7 @@
 <?php
 
+use Xve\LaravelPaynl\Services\PaynlService;
+
 return [
     /*
      * Credentials from the Pay. dashboard: the token code (AT-####-####), the API
@@ -30,12 +32,11 @@ return [
 
     /*
      * Sent along with every order so Pay. can recognise the integration.
-     * `object` carries the POS name and version ("XVE Kassa|1.0") or the partner code Pay.
-     * hands out on certification (TEST_PARTNER_VALUE during the certification run).
+     * `object` is XVE's PartnerID, the same in every project: leave PAYNL_STATS_OBJECT empty.
      * `tool` and `extra1` are free fields, searchable in the Pay. admin panel.
      */
     'stats' => [
-        'object' => env('PAYNL_STATS_OBJECT', 'xve/laravel-paynl'),
+        'object' => env('PAYNL_STATS_OBJECT') ?: PaynlService::PARTNER_ID,
         'tool' => env('PAYNL_STATS_TOOL', env('APP_NAME')),
         'extra1' => env('PAYNL_STATS_EXTRA1'),
     ],

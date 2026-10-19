@@ -6,3 +6,4 @@ composer.lock
 .DS_Store
 .env.sandbox
 .claude/settings.local.json
+/build

@@ -17,6 +17,7 @@ final class Terminal implements Arrayable, JsonSerializable
         public readonly string $status,
         public readonly string $connectionStatus,
         public readonly array $location = [],
+        public readonly array $paymentTypes = [],
     ) {}
 
     public static function fromPayTerminal(PayTerminal $terminal): self
@@ -36,6 +37,7 @@ final class Terminal implements Arrayable, JsonSerializable
             status: strtoupper((string) $read(fn () => $terminal->getStatus(), '')),
             connectionStatus: strtoupper((string) $read(fn () => $terminal->getConnectionStatus(), '')),
             location: (array) $read(fn () => $terminal->getLocation(), []),
+            paymentTypes: array_values(array_map('strtoupper', (array) $read(fn () => $terminal->getPaymentTypes(), []))),
         );
     }
 
@@ -47,6 +49,14 @@ final class Terminal implements Arrayable, JsonSerializable
         return $this->status === 'ACTIVE' && $this->connectionStatus !== 'OFFLINE';
     }
 
+    /**
+     * The terminal has the refund contract, so startTerminalRefund() can pay back to a card on it.
+     */
+    public function supportsRefund(): bool
+    {
+        return in_array('REFUND', $this->paymentTypes, true);
+    }
+
     public function toArray(): array
     {
         return [
@@ -55,7 +65,9 @@ final class Terminal implements Arrayable, JsonSerializable
             'status' => $this->status,
             'connectionStatus' => $this->connectionStatus,
             'location' => $this->location,
+            'paymentTypes' => $this->paymentTypes,
             'usable' => $this->isUsable(),
+            'supportsRefund' => $this->supportsRefund(),
         ];
     }
 

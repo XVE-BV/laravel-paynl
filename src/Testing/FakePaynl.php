@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace Xve\LaravelPaynl\Testing;
 
 use PayNL\Sdk\Model\Amount;
-use PayNL\Sdk\Model\Request\OrderCreateRequest;
 use PHPUnit\Framework\Assert as PHPUnit;
 use stdClass;
 use Xve\LaravelPaynl\Concerns\VerifiesPayments;
 use Xve\LaravelPaynl\Contracts\PaymentGateway;
 use Xve\LaravelPaynl\Exceptions\PaynlException;
+use Xve\LaravelPaynl\Support\OrderRequest;
 use Xve\LaravelPaynl\Support\Payment;
 use Xve\LaravelPaynl\Support\PaymentStatus;
+use Xve\LaravelPaynl\Support\Receipt;
 use Xve\LaravelPaynl\Support\Terminal;
 
 /**
@@ -25,7 +26,7 @@ use Xve\LaravelPaynl\Support\Terminal;
  *
  * Each started payment is recorded as an array with: type (terminal, terminal_refund,
  * online), amount, description, reference, terminalCode, returnUrl, paymentMethodId, request
- * (the OrderCreateRequest any $configure callback filled) and payment.
+ * (the OrderRequest any $configure callback filled) and payment.
  */
 final class FakePaynl implements PaymentGateway
 {
@@ -51,7 +52,7 @@ final class FakePaynl implements PaymentGateway
     /**
      * Moves an order to a status, as the exchange would. An order the fake does not know yet is created.
      */
-    public function markAs(string $orderId, PaymentStatus $status, ?int $amount = null, ?string $failureReason = null): Payment
+    public function markAs(string $orderId, PaymentStatus $status, ?int $amount = null, ?string $failureReason = null, ?Receipt $receipt = null): Payment
     {
         $current = $this->state->payments[$orderId] ?? null;
 
@@ -64,6 +65,7 @@ final class FakePaynl implements PaymentGateway
             paymentUrl: $current?->paymentUrl,
             statusUrl: $current?->statusUrl,
             failureReason: $failureReason,
+            receipt: $receipt,
         );
     }
 
@@ -169,7 +171,7 @@ final class FakePaynl implements PaymentGateway
     private function start(string $type, int $amount, string $description, string $reference, ?string $terminalCode = null, ?string $returnUrl = null, ?int $paymentMethodId = null, ?callable $configure = null): Payment
     {
         // Filled like the real gateway does, so the callback and the assertions see a complete order
-        $request = (new OrderCreateRequest)
+        $request = (new OrderRequest)
             ->setServiceId('SL-FAKE-0000')
             ->setAmount(new Amount($amount, 'EUR'))
             ->setDescription($description)

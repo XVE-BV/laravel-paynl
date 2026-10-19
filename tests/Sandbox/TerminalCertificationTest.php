@@ -14,7 +14,8 @@ use Xve\LaravelPaynl\Tests\Sandbox\Sandbox;
  *   composer test:terminal -- --filter="scenario 1"
  *
  * For every scenario, note the status and failureReason it prints: that is the message the
- * kassa screen must show, and what Pay. wants to see during the certification.
+ * kassa screen must show, and what Pay. wants to see during the certification. Each result
+ * (and receipt) is also written to build/paynl-certification.md, the evidence to send to Pay.
  */
 
 uses()->group('terminal');
@@ -34,9 +35,13 @@ function startOnTerminal(string $scenario): Payment
     return $payment;
 }
 
-function reportTerminalResult(Payment $payment): void
+function reportTerminalResult(string $scenario, Payment $payment): void
 {
     Sandbox::say("Result: {$payment->status->value}".($payment->failureReason ? " ({$payment->failureReason})" : ''));
+    if ($payment->receipt !== null) {
+        Sandbox::say('Receipt:'.PHP_EOL.$payment->receipt->text());
+    }
+    Sandbox::record($scenario, $payment);
 }
 
 it('finds the test terminal active and online', function () {
@@ -51,9 +56,12 @@ it('scenario 1: completes a successful card payment', function () {
     Sandbox::say('Pay with a (test) card on the terminal now.');
 
     $result = Sandbox::waitForFinalStatus($payment->orderId);
-    reportTerminalResult($result);
+    reportTerminalResult('Scenario 1: successful payment', $result);
 
-    expect($result->status)->toBe(PaymentStatus::Paid);
+    // Pay. requires the kassa to offer the receipt after a successful payment
+    expect($result->status)->toBe(PaymentStatus::Paid)
+        ->and($result->receipt)->not->toBeNull('Pay. returned no receipt for the paid order')
+        ->and($result->receipt->lines)->not->toBeEmpty();
 });
 
 it('scenario 2: reports a payment the customer stops on the terminal', function () {
@@ -61,7 +69,7 @@ it('scenario 2: reports a payment the customer stops on the terminal', function 
     Sandbox::say('Press the STOP (red) button on the terminal now.');
 
     $result = Sandbox::waitForFinalStatus($payment->orderId);
-    reportTerminalResult($result);
+    reportTerminalResult('Scenario 2: stopped on the terminal', $result);
 
     expect($result->status)->toBe(PaymentStatus::Cancelled);
 });
@@ -71,18 +79,37 @@ it('scenario 3: reports a payment that expires on the terminal', function () {
     Sandbox::say('Do NOT touch the terminal; waiting for it to time out.');
 
     $result = Sandbox::waitForFinalStatus($payment->orderId, (int) Sandbox::env('PAYNL_SANDBOX_TIMEOUT', '300'));
-    reportTerminalResult($result);
+    reportTerminalResult('Scenario 3: timeout', $result);
 
     expect($result->status)->toBe(PaymentStatus::Cancelled);
 });
 
-it('scenario 4: refuses a second payment while the terminal is busy', function () {
-    $first = startOnTerminal('scenario 4 (first)');
+// As Pay. runs it: the terminal is busy with a payment from the Pay. Admin Panel (Collect desk), then the POS sends one
+it('scenario 4: refuses a payment while the terminal is busy', function () {
+    $wait = (int) Sandbox::env('PAYNL_SANDBOX_BUSY_WAIT', '20');
+    Sandbox::say("Start a payment on {$this->terminal} from the Pay. Admin Panel (Collect desk) now; the POS sends its payment in {$wait} seconds.");
+    sleep($wait);
 
     try {
-        $second = startOnTerminal('scenario 4 (second)');
+        $payment = startOnTerminal('scenario 4');
+        $result = Sandbox::waitForFinalStatus($payment->orderId, 60);
+        reportTerminalResult('Scenario 4: terminal busy', $result);
+        expect($result->status)->toBe(PaymentStatus::Cancelled);
+    } catch (PaynlException $e) {
+        Sandbox::say("Payment refused: {$e->getMessage()}");
+        expect($e->getMessage())->not->toBeEmpty();
+    }
+
+    Sandbox::say('Stop the Collect desk payment on the terminal.');
+});
+
+it('refuses a second POS payment while the terminal is busy', function () {
+    $first = startOnTerminal('busy (first)');
+
+    try {
+        $second = startOnTerminal('busy (second)');
         $result = Sandbox::waitForFinalStatus($second->orderId, 60);
-        reportTerminalResult($result);
+        reportTerminalResult('Terminal busy with a POS payment', $result);
         expect($result->status)->toBe(PaymentStatus::Cancelled);
     } catch (PaynlException $e) {
         Sandbox::say("Second payment refused: {$e->getMessage()}");
@@ -99,7 +126,7 @@ it('scenario 5: reports a payment to a terminal without connection', function ()
     try {
         $payment = startOnTerminal('scenario 5');
         $result = Sandbox::waitForFinalStatus($payment->orderId);
-        reportTerminalResult($result);
+        reportTerminalResult('Scenario 5: no connection', $result);
         expect($result->status)->toBe(PaymentStatus::Cancelled);
     } catch (PaynlException $e) {
         Sandbox::say("Payment refused: {$e->getMessage()}");
@@ -110,13 +137,17 @@ it('scenario 5: reports a payment to a terminal without connection', function ()
 });
 
 it('scenario 6: refunds to the card on the terminal', function () {
+    $terminal = collect($this->paynl->listTerminals())->firstWhere('code', $this->terminal);
+    if (! $terminal?->supportsRefund()) {
+        test()->markTestSkipped("{$this->terminal} has no refund contract (paymentTypes: ".implode(', ', $terminal?->paymentTypes ?? []).'); scenario 6 only applies when refunds are activated.');
+    }
+
     $refund = $this->paynl->startTerminalRefund(Sandbox::terminalAmount(), $this->terminal, 'Certification scenario 6', 'CERT-'.time());
     Sandbox::say("scenario 6: refund {$refund->orderId} sent to {$this->terminal}. Present the (test) card on the terminal now.");
 
     $result = Sandbox::waitForFinalStatus($refund->orderId);
-    reportTerminalResult($result);
+    reportTerminalResult('Scenario 6: refund on the terminal', $result);
 
-    // Needs the refund contract on the terminal (Terminals:Browse lists REFUND in its paymentTypes)
     expect($result->status->isFinal())->toBeTrue()
         ->and($result->status)->not->toBe(PaymentStatus::Cancelled);
 });
@@ -127,7 +158,7 @@ it('cancels a terminal payment from the POS', function () {
 
     $this->paynl->cancel($payment->orderId);
     $result = Sandbox::waitForFinalStatus($payment->orderId, 60);
-    reportTerminalResult($result);
+    reportTerminalResult('Cancelled from the POS', $result);
 
     expect($result->status)->toBe(PaymentStatus::Cancelled);
 });

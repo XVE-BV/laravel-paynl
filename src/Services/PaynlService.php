@@ -11,7 +11,6 @@ use PayNL\Sdk\Model\Amount;
 use PayNL\Sdk\Model\Request\OrderAbortRequest;
 use PayNL\Sdk\Model\Request\OrderApproveRequest;
 use PayNL\Sdk\Model\Request\OrderCaptureRequest;
-use PayNL\Sdk\Model\Request\OrderCreateRequest;
 use PayNL\Sdk\Model\Request\OrderDeclineRequest;
 use PayNL\Sdk\Model\Request\OrderStatusRequest;
 use PayNL\Sdk\Model\Request\OrderVoidRequest;
@@ -26,6 +25,7 @@ use Xve\LaravelPaynl\Concerns\VerifiesPayments;
 use Xve\LaravelPaynl\Contracts\PaymentGateway;
 use Xve\LaravelPaynl\Exceptions\PaynlException;
 use Xve\LaravelPaynl\Http\Client\TimeoutGuzzleClientFactory;
+use Xve\LaravelPaynl\Support\OrderRequest;
 use Xve\LaravelPaynl\Support\Payment;
 use Xve\LaravelPaynl\Support\Terminal;
 
@@ -42,6 +42,13 @@ class PaynlService implements PaymentGateway
      * Pay. payment method id for a refund to the card on the terminal.
      */
     public const TERMINAL_REFUND_METHOD = 2351;
+
+    /**
+     * XVE's PartnerID at Pay., sent as stats.object on every order of every project so Pay. can
+     * trace them to this integration. TEST_PARTNER_VALUE (what Pay.'s certification test case 5
+     * expects) until the certification hands out the real one; then it goes here, in a new release.
+     */
+    public const PARTNER_ID = 'TEST_PARTNER_VALUE';
 
     private const SIGNATURE_ALGORITHMS = ['sha256', 'sha512'];
 
@@ -247,7 +254,7 @@ class PaynlService implements PaymentGateway
         }
     }
 
-    private function orderRequest(int $amount, string $description, string $reference, ?string $returnUrl = null): OrderCreateRequest
+    private function orderRequest(int $amount, string $description, string $reference, ?string $returnUrl = null): OrderRequest
     {
         $this->assertAmount($amount);
         // Pay. only accepts letters, digits and dashes, up to 128 characters
@@ -255,7 +262,7 @@ class PaynlService implements PaymentGateway
             throw new InvalidArgumentException("Pay. reference [{$reference}] may only hold letters, digits and dashes (max 128).");
         }
 
-        $request = new OrderCreateRequest;
+        $request = new OrderRequest;
         $request->setServiceId((string) $this->config['service_id']);
         $request->setAmount(new Amount($amount, $this->currency()));
         $request->setDescription($description);
