@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Event;
 use Xve\LaravelPaynl\Events\PaymentStatusUpdated;
-use Xve\LaravelPaynl\Exceptions\PaynlException;
 use Xve\LaravelPaynl\Services\PaynlService;
 use Xve\LaravelPaynl\Support\PaymentStatus;
 use Xve\LaravelPaynl\Support\Terminal;
@@ -33,7 +32,8 @@ it('authenticates and lists the terminals of the account', function () {
 });
 
 it('passes certification case 1: minimum input', function () {
-    $payment = $this->paynl->startOnlinePayment(10101, 'TEST_DESCRIPTION', 'https://example.com/return', 'TESTREFERENCE', SANDBOX_METHOD);
+    // The sandbox checks TEST_DESCRIPTION_1 / TESTREFERENCE1 (as in Pay.'s sample body), not the values in its docs table
+    $payment = $this->paynl->startOnlinePayment(10101, 'TEST_DESCRIPTION_1', 'https://example.com/return', 'TESTREFERENCE1', SANDBOX_METHOD);
 
     expect($payment->orderId)->not->toBeEmpty()
         ->and($payment->status)->toBe(PaymentStatus::Pending)
@@ -89,6 +89,11 @@ it('rejects a forged exchange that claims an unknown order is paid', function ()
     Event::assertNotDispatched(PaymentStatusUpdated::class);
 });
 
-it('refuses a terminal payment to a terminal that is not on the account', function () {
-    $this->paynl->startTerminalPayment(1, 'TH-0000-0000', 'Unknown terminal');
-})->throws(PaynlException::class);
+// Pay. does not check the terminal code on Order:Create: the order is created and waits for a
+// terminal that never answers, so a POS picks its terminal from listTerminals() and cancels on timeout.
+it('leaves a payment to a terminal that is not on the account pending until the POS cancels it', function () {
+    $payment = $this->paynl->startTerminalPayment(1, 'TH-0000-0000', 'Unknown terminal', 'UNKNOWN-'.time());
+
+    expect($this->paynl->getStatus($payment->orderId)->status)->toBe(PaymentStatus::Pending)
+        ->and($this->paynl->cancel($payment->orderId)->status)->toBe(PaymentStatus::Cancelled);
+});

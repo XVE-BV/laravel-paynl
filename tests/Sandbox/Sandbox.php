@@ -21,9 +21,10 @@ final class Sandbox
             self::$env = is_file($file) ? Dotenv::parse((string) file_get_contents($file)) : [];
         }
 
+        // getenv() returns false for an unset variable, and filled(false) is true
         $value = getenv($key);
 
-        return filled($value) ? $value : (filled(self::$env[$key] ?? null) ? self::$env[$key] : $default);
+        return $value !== false && filled($value) ? $value : (filled(self::$env[$key] ?? null) ? self::$env[$key] : $default);
     }
 
     /**
