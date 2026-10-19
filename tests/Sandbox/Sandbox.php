@@ -63,9 +63,12 @@ final class Sandbox
         return $terminal;
     }
 
-    public static function terminalAmount(): float
+    /**
+     * In cents.
+     */
+    public static function terminalAmount(): int
     {
-        return (float) self::env('PAYNL_SANDBOX_TERMINAL_AMOUNT', '0.01');
+        return (int) self::env('PAYNL_SANDBOX_TERMINAL_AMOUNT', '1');
     }
 
     /**

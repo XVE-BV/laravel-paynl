@@ -109,6 +109,18 @@ it('scenario 5: reports a payment to a terminal without connection', function ()
     Sandbox::say('Reconnect the terminal.');
 });
 
+it('scenario 6: refunds to the card on the terminal', function () {
+    $refund = $this->paynl->startTerminalRefund(Sandbox::terminalAmount(), $this->terminal, 'Certification scenario 6', 'CERT-'.time());
+    Sandbox::say("scenario 6: refund {$refund->orderId} sent to {$this->terminal}. Present the (test) card on the terminal now.");
+
+    $result = Sandbox::waitForFinalStatus($refund->orderId);
+    reportTerminalResult($result);
+
+    // Needs the refund contract on the terminal (Terminals:Browse lists REFUND in its paymentTypes)
+    expect($result->status->isFinal())->toBeTrue()
+        ->and($result->status)->not->toBe(PaymentStatus::Cancelled);
+});
+
 it('cancels a terminal payment from the POS', function () {
     $payment = startOnTerminal('POS cancel');
     sleep(5);

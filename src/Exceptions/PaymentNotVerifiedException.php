@@ -30,8 +30,8 @@ class PaymentNotVerifiedException extends RuntimeException
         return new self(self::NOT_PAID, $payment, "Pay. order {$payment->orderId} is {$payment->status->value}, not paid.");
     }
 
-    public static function amountMismatch(Payment $payment, float $expected): self
+    public static function amountMismatch(Payment $payment, int $expected): self
     {
-        return new self(self::AMOUNT_MISMATCH, $payment, sprintf('Pay. order %s is paid for %.2f, expected %.2f.', $payment->orderId, $payment->amount, $expected));
+        return new self(self::AMOUNT_MISMATCH, $payment, sprintf('Pay. order %s is paid for %.2f, expected %.2f.', $payment->orderId, $payment->amount / 100, $expected / 100));
     }
 }

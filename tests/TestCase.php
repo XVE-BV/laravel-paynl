@@ -17,5 +17,6 @@ class TestCase extends Orchestra
         $app['config']->set('paynl.token_code', 'AT-0000-0000');
         $app['config']->set('paynl.api_token', 'secret');
         $app['config']->set('paynl.service_id', 'SL-0000-0000');
+        $app['config']->set('paynl.service_secret', 'sl-secret');
     }
 }

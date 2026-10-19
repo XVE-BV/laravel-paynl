@@ -15,6 +15,11 @@ class PaynlException extends RuntimeException
         return new self('Pay.nl is not configured: set PAYNL_TOKEN_CODE, PAYNL_API_TOKEN and PAYNL_SERVICE_ID.');
     }
 
+    public static function invalidExchange(string $reason): self
+    {
+        return new self("Pay.nl exchange rejected: {$reason}.");
+    }
+
     public static function fromThrowable(Throwable $e): self
     {
         $message = $e instanceof PayException ? ($e->getFriendlyMessage() ?: $e->getMessage()) : $e->getMessage();

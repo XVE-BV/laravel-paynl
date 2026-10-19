@@ -16,18 +16,32 @@ class ExchangeController extends Controller
 {
     public function __invoke(Request $request, PaynlService $paynl): Response
     {
-        $payload = $request->all();
-
         try {
-            $payment = $paynl->handleExchange($payload);
+            $payment = $paynl->handleExchange($request);
             PaymentStatusUpdated::dispatch($payment);
         } catch (Throwable $e) {
-            // Answering FALSE makes Pay. retry the exchange later
-            Log::error('Pay.nl exchange failed', ['error' => $e->getMessage(), 'payload' => $payload]);
+            // Answering FALSE makes Pay. retry the exchange later. No payload in the log: it holds customer data.
+            Log::error('Pay.nl exchange failed', [
+                'orderId' => $request->input('object.orderId') ?? $request->input('order_id'),
+                'signed' => $request->header('signature-method') === 'HMAC',
+                'exception' => $e,
+            ]);
 
-            return response($paynl->exchangeResponse($payload, false, 'Exchange processing failed'));
+            return $this->respond($request, false, 'Exchange processing failed');
         }
 
-        return response($paynl->exchangeResponse($payload, true, 'Processed '.$payment->status->value));
+        return $this->respond($request, true, 'Processed '.$payment->status->value);
+    }
+
+    /**
+     * JSON for (signed) JSON exchanges, "TRUE| ..." for the classic ones; anything else makes Pay. retry.
+     */
+    private function respond(Request $request, bool $result, string $message): Response
+    {
+        if ($request->header('signature-method') === 'HMAC' || $request->isJson()) {
+            return response(json_encode(['result' => $result, 'description' => $message]), 200, ['Content-Type' => 'application/json']);
+        }
+
+        return response(($result ? 'TRUE' : 'FALSE').'| '.$message, 200, ['Content-Type' => 'text/plain']);
     }
 }

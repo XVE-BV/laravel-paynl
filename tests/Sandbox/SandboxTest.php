@@ -33,7 +33,7 @@ it('authenticates and lists the terminals of the account', function () {
 });
 
 it('passes certification case 1: minimum input', function () {
-    $payment = $this->paynl->startOnlinePayment(101.01, 'TEST_DESCRIPTION', 'https://example.com/return', 'TESTREFERENCE', SANDBOX_METHOD);
+    $payment = $this->paynl->startOnlinePayment(10101, 'TEST_DESCRIPTION', 'https://example.com/return', 'TESTREFERENCE', SANDBOX_METHOD);
 
     expect($payment->orderId)->not->toBeEmpty()
         ->and($payment->status)->toBe(PaymentStatus::Pending)
@@ -44,7 +44,7 @@ it('passes certification case 1: minimum input', function () {
 it('passes certification case 5: partner-integration code', function () {
     config(['paynl.stats.object' => 'TEST_PARTNER_VALUE']);
 
-    $payment = app(PaynlService::class)->startOnlinePayment(505.05, 'TEST_DESCRIPTION_5', 'https://example.com/return', 'TESTREFERENCE5', SANDBOX_METHOD);
+    $payment = app(PaynlService::class)->startOnlinePayment(50505, 'TEST_DESCRIPTION_5', 'https://example.com/return', 'TESTREFERENCE5', SANDBOX_METHOD);
 
     expect($payment->orderId)->not->toBeEmpty()
         ->and($payment->paymentUrl)->toStartWith('https://');
@@ -52,18 +52,18 @@ it('passes certification case 5: partner-integration code', function () {
 });
 
 it('reads the status of an order back', function () {
-    $created = $this->paynl->startOnlinePayment(12.34, 'Status check', 'https://example.com/return', 'STATUS-'.time(), SANDBOX_METHOD);
+    $created = $this->paynl->startOnlinePayment(1234, 'Status check', 'https://example.com/return', 'STATUS-'.time(), SANDBOX_METHOD);
 
     $payment = $this->paynl->getStatus($created->orderId);
 
     expect($payment->orderId)->toBe($created->orderId)
         ->and($payment->status)->toBe(PaymentStatus::Pending)
-        ->and($payment->amount)->toBe(12.34);
+        ->and($payment->amount)->toBe(1234);
 });
 
 it('cancels a pending order and confirms it through a verified exchange', function () {
     Event::fake([PaymentStatusUpdated::class]);
-    $created = $this->paynl->startOnlinePayment(5.00, 'Cancel check', 'https://example.com/return', 'CANCEL-'.time(), SANDBOX_METHOD);
+    $created = $this->paynl->startOnlinePayment(500, 'Cancel check', 'https://example.com/return', 'CANCEL-'.time(), SANDBOX_METHOD);
 
     expect($this->paynl->cancel($created->orderId)->status)->toBe(PaymentStatus::Cancelled);
 
@@ -90,5 +90,5 @@ it('rejects a forged exchange that claims an unknown order is paid', function ()
 });
 
 it('refuses a terminal payment to a terminal that is not on the account', function () {
-    $this->paynl->startTerminalPayment(0.01, 'TH-0000-0000', 'Unknown terminal');
+    $this->paynl->startTerminalPayment(1, 'TH-0000-0000', 'Unknown terminal');
 })->throws(PaynlException::class);
