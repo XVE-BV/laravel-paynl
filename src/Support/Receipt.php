@@ -82,6 +82,31 @@ final class Receipt implements Arrayable, JsonSerializable
         return implode(PHP_EOL, $this->lines);
     }
 
+    /**
+     * The lines to print for the customer, followed by a merchant copy with a signature line when the
+     * terminal asks the customer to sign.
+     *
+     * @return string[]
+     */
+    public function printLines(): array
+    {
+        if (! $this->signatureRequired) {
+            return $this->lines;
+        }
+
+        return [
+            ...$this->lines,
+            '',
+            __('paynl::terminal.merchant_copy'),
+            ...$this->lines,
+            '',
+            __('paynl::terminal.signature'),
+            '',
+            '',
+            '______________________',
+        ];
+    }
+
     public function toArray(): array
     {
         return [

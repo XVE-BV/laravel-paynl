@@ -113,7 +113,29 @@ A listener that throws makes the exchange answer `FALSE`, so Pay. retries. The r
 
 ## Screens
 
-The package ships no routes for a kassa or checkout screen: each app exposes its own endpoints (with its own url, auth and response shape) and calls the gateway from there. A kassa that polls should wait about 3 seconds, then ask at most once a second; `Payment::$statusUrl` is Pay.'s public status link for a POS that polls Pay. directly.
+The package ships no routes for a kassa or checkout screen: each app exposes its own endpoints (with its own url, auth and response shape) and calls the package from there. `Payment::$statusUrl` is Pay.'s public status link for a POS that polls Pay. directly.
+
+## Terminal payments in a kassa
+
+`Xve\LaravelPaynl\Services\TerminalPayments` does everything Pay.'s POS certification asks of a kassa, so its endpoints stay thin and its screen only shows what it gets back:
+
+```php
+public function start(Request $request, TerminalPayments $terminal)
+{
+    // The screen sends a new reference per attempt: the same one again follows that order instead of charging twice
+    return $terminal->start(1210, $request->terminal, 'Kassa', $request->reference, context: ['sale' => $request->sale]);
+}
+
+public function status(string $orderId, TerminalPayments $terminal) { return $terminal->status($orderId); }
+public function cancel(string $orderId, TerminalPayments $terminal) { return $terminal->cancel($orderId); }
+```
+
+- `start()` refuses a terminal that is unknown, offline or inactive, and says when Pay. refuses because the terminal is busy. The running payment is only kept in the cache (`paynl.terminal.remember`, 24 hours: long enough for Pay.'s exchange retries), with the `context` the app needs to book it and the user who started it. No tables: the app's own records stay the truth about what is booked.
+- `start()`, `status()` and `cancel()` return a `TerminalPaymentStatus`: the payment plus `final`, `message` (one per outcome: paid, cancelled from the kassa, timeout, expired, card declined, stopped on the terminal with Pay.'s reason, refunded; Dutch and English) and `pollAfterMs`. The screen shows `message` and asks again after `pollAfterMs`; `null` means stop. Pay.'s rhythm (3 seconds, then at most once a second) and the timeout (`paynl.terminal.timeout`, after which the payment is stopped) live in the package.
+- `book($orderId, $amountInCents, fn (Payment $payment, TerminalPayment $terminalPayment) => ..., $booked)` runs the app's booking once Pay. confirms the amount, in one transaction and exactly once per order; a second call gets what the first one returned. `$booked` checks the app's own records (e.g. a payment with this `transaction_id`) and returns the answer for an order booked already, or null, so nothing is booked twice when the cache was cleared.
+- When only the exchange learns the payment was paid (the kassa closed), `TerminalPaymentPaid` fires as the cashier who started it. The app listens and books from `$event->terminalPayment->context` through `book()`.
+- What cannot be started or booked throws `TerminalPaymentException`, which Laravel answers as JSON with the message for the cashier.
+- `Receipt::printLines()` gives the card receipt to print, with a merchant copy to sign when `signatureRequired`.
 
 ## Testing an app or package that uses it
 

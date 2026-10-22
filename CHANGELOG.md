@@ -4,6 +4,13 @@ All notable changes, per release tag. Follows [semver](https://semver.org): patc
 
 ## Unreleased
 
+- `TerminalPayments` for a kassa: start a terminal payment once per reference (refuses unknown, offline and inactive terminals, says when the terminal is busy), follow it with a `TerminalPaymentStatus` (`final`, a message per outcome in Dutch and English, `pollAfterMs`), stop it after `paynl.terminal.timeout`, cancel from the kassa, and `book()` it exactly once after Pay. confirms the amount.
+- `TerminalPaymentPaid`: fired as the cashier who started it when the exchange reports a terminal payment as paid that is not booked yet. Running terminal payments are only kept in the cache (`paynl.terminal.remember`), no tables.
+- `TerminalPaymentException`, rendered as JSON with the message for the cashier.
+- `Receipt::printLines()`: the receipt with a merchant copy to sign when the terminal asks for a signature.
+
+## 2.0.0
+
 - Terminal payments (list terminals, start, status, cancel), online payments, verified exchange with `PaymentStatusUpdated`, Pay. stats fields.
 - Amounts are integer cents everywhere (`Payment::$amount`, `startOnlinePayment(2500, ...)`).
 - `Paynl` facade, `PaymentGateway` contract and `Paynl::fake()` with assertions, for the apps and packages built on it.

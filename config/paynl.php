@@ -51,4 +51,23 @@ return [
         'path' => 'paynl/exchange',
         'middleware' => [],
     ],
+
+    /*
+     * Terminal payments through TerminalPayments. Pay. asks a kassa to wait 3 seconds before the
+     * first status call, then to ask at most once a second. A payment nobody pays within `timeout`
+     * seconds is stopped; when Pay. still has no final answer `cancel_grace` seconds later, the
+     * kassa stops asking. `book_wait` is how long a booking waits for another one of the same order.
+     *
+     * A running payment is kept in the cache (`cache_store`, null is the default store) for
+     * `remember` seconds: long enough for Pay.'s exchange retries (6 times within 2 hours).
+     */
+    'terminal' => [
+        'first_poll_ms' => 3000,
+        'poll_ms' => 1000,
+        'timeout' => 180,
+        'cancel_grace' => 60,
+        'book_wait' => 10,
+        'cache_store' => null,
+        'remember' => 86400,
+    ],
 ];
