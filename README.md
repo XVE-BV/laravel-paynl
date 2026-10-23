@@ -13,17 +13,17 @@ Not on Packagist. Add the repository to the app's `composer.json` once; it is pu
 ```
 
 ```bash
-composer require xve/laravel-paynl:^2.1
+composer require xve/laravel-paynl:^1.0
 php artisan vendor:publish --tag=paynl-config   # optional
 ```
 
 `paynl/php-sdk` still requires Guzzle 7. If the app is locked on Guzzle 8, add `-W` so Composer may downgrade it.
 
-A package that builds on it adds `"xve/laravel-paynl": "^2.1"` to its own `require`; the app still needs the repository entry.
+A package that builds on it adds `"xve/laravel-paynl": "^1.0"` to its own `require`; the app still needs the repository entry.
 
 ## Updates
 
-Releases are git tags (`v2.0.0`, `v2.1.0`, ...) following semver, listed in `CHANGELOG.md`. Apps update with `composer update xve/laravel-paynl`; a breaking change gets a new major (`v3.0.0`) and is only picked up after the app changes its constraint.
+Releases are git tags (`v1.0.0`, `v1.1.0`, ...) following semver, listed in `CHANGELOG.md`. Apps update with `composer update xve/laravel-paynl`; a breaking change gets a new major (`v2.0.0`) and is only picked up after the app changes its constraint.
 
 ## Configure
 
