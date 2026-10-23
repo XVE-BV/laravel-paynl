@@ -4,11 +4,11 @@ Laravel integration for Pay.nl, built on the official [`paynl/php-sdk`](https://
 
 ## Install
 
-Not on Packagist. Add the repository to the app's `composer.json` once; it is public, so Composer needs no SSH key or GitHub token:
+Not on Packagist. Add the repository to the app's `composer.json` once; it is public, so Composer needs no SSH key or GitHub token. `no-api` makes Composer read it with git instead of the GitHub API and its rate limit of 60 calls an hour (`git` must be installed wherever `composer install` runs):
 
 ```json
 "repositories": [
-    { "type": "vcs", "url": "https://github.com/XVE-BV/laravel-paynl" }
+    { "type": "vcs", "url": "https://github.com/XVE-BV/laravel-paynl", "no-api": true }
 ]
 ```
 
