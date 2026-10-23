@@ -1,12 +1,12 @@
 # Pay. certification run book
 
-Pay. certifies an integration (the kassa or webshop built on this package), not the package itself. XVE certifies once as a partner, with one app on its own Pay. test account. Every order sends `PAYNL_STATS_OBJECT` as `stats.object`: `TEST_PARTNER_VALUE` (what Pay. expects in the tests) until Pay. hands out the real PartnerID.
+Pay. certifies an integration (the kassa or webshop built on this package), not the package itself. XVE certifies once as a partner, with one app on its own Pay. test account. Every order sends `PAYNL_STATS_OBJECT` as `stats.object`: `TEST_PARTNER_VALUE` (what Pay. expects in the tests) until Pay. hands out the real PartnerID. Pay.'s POS certification page asks for the POS software name and version instead (`"YOUR_POS_SOFTWARE_NAME|1.0"`): ask the implementation manager which value the POS run should send, `PAYNL_STATS_OBJECT` takes either.
 
 Sources: [certification](https://developer.pay.nl/docs/certification), [test your integration](https://developer.pay.nl/docs/testing-your-integration), [Cloud Connect validation checklist](https://support.pay.nl/en/knowledge/pay-pos-cloudconnect-validation-checklist), [partner registration](https://developer.pay.nl/docs/registration).
 
 ## 0. Before you start
 
-- Partner registration in My Pay with action code `partner`, and a partner manager / implementation manager at Pay. Contact: `partner_integration@pay.nl` or the *Pay.integrators* Slack channel.
+- Partner registration in My Pay with action code `partner`, and a partner manager / implementation manager at Pay. Contact: `partner_integration@pay.nl`, the [*Pay.integrators* Slack channel](https://paynl.slack.com/archives/C04LV44909M) or an [eMeeting with Pay.integrators](https://outlook.office365.com/owa/calendar/PayIntegrators@pay.nl/bookings/).
 - Test only on XVE's own Pay. account. Pay. does not allow testing as a third party on a merchant's account.
 - On the test sales location: PIN (1927) active, exchange **SIGNED_JSON_POST** with a retry scheme, and the refund contract on the terminal if refunds are in scope (the terminal then lists `REFUND` in `paymentTypes`).
 - `.env.sandbox` filled in (copy `.env.sandbox.example`). For the terminal scenarios, `PAYNL_SANDBOX_URL` points to a public tunnel (Expose/ngrok) so Pay. can reach the exchange.
