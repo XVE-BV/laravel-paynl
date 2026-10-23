@@ -67,7 +67,7 @@ dataset('certification cases', [
         $request->setOrder($order);
     }],
 
-    // Pay.'s fixed test value; the same as PaynlService::PARTNER_ID until the real PartnerID replaces it there
+    // Pay.'s fixed test value, until Pay. hands out the real PartnerID
     'case 5: partner-integration code' => [5, 50505, 'TEST_DESCRIPTION_5', 'TESTREFERENCE5', null, ['paynl.stats.object' => 'TEST_PARTNER_VALUE']],
 
     'case 6: stats data' => [6, 60606, 'TEST_DESCRIPTION_6', 'TESTREFERENCE6', function (OrderRequest $request) {

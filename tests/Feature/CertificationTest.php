@@ -7,7 +7,6 @@ use PayNL\Sdk\Model\Order;
 use PayNL\Sdk\Model\Products;
 use PayNL\Sdk\Model\Terminal as PayTerminal;
 use Xve\LaravelPaynl\Events\PaymentStatusUpdated;
-use Xve\LaravelPaynl\Services\PaynlService;
 use Xve\LaravelPaynl\Support\OrderRequest;
 use Xve\LaravelPaynl\Support\PaymentStatus;
 use Xve\LaravelPaynl\Support\Product;
@@ -86,6 +85,7 @@ it('keeps the incident text of a refused terminal payment as the failure reason'
 });
 
 it('sends the fields the SDK models leave out', function () {
+    config(['paynl.stats.object' => 'TEST_PARTNER_VALUE']);
     $sent = null;
     paynlWith(function ($request) use (&$sent) {
         $sent = $request;
@@ -101,7 +101,7 @@ it('sends the fields the SDK models leave out', function () {
     expect($sent)->toBeInstanceOf(OrderRequest::class)
         ->and($body['customer'])->toMatchArray(['gaClientId' => 'GA-1'])
         ->and($body['customer']['company'])->toBe(['name' => 'ACME', 'cocNumber' => '12345678', 'country' => 'NL'])
-        ->and($body['stats'])->toMatchArray(['object' => config('paynl.stats.object'), 'promotorId' => 123456789]);
+        ->and($body['stats'])->toMatchArray(['object' => 'TEST_PARTNER_VALUE', 'promotorId' => 123456789]);
 });
 
 it('sends product descriptions in UTF-8, not transliterated', function () {
@@ -128,7 +128,8 @@ it('knows which terminals can refund to a card', function () {
         ->and($withRefund->toArray())->toMatchArray(['paymentTypes' => ['SALE', 'REFUND'], 'supportsRefund' => true]);
 });
 
-it('sends XVE\'s PartnerID as stats.object on every order without any setting in the app', function () {
+it('sends the PartnerID as stats.object on every order', function () {
+    config(['paynl.stats.object' => 'TEST_PARTNER_VALUE']);
     $sent = [];
     $paynl = paynlWith(function ($request) use (&$sent) {
         $sent[] = $request;
@@ -140,7 +141,16 @@ it('sends XVE\'s PartnerID as stats.object on every order without any setting in
     $paynl->startTerminalRefund(500, 'TH-1234-5678', 'Retour');
     $paynl->startOnlinePayment(2500, 'Webshop', 'https://shop.test/done');
 
-    expect(config('paynl.stats.object'))->toBe(PaynlService::PARTNER_ID)
-        ->and(PaynlService::PARTNER_ID)->toBe('TEST_PARTNER_VALUE')
-        ->and(array_map(fn ($request) => $request->getBodyParameters()['stats']['object'], $sent))->each->toBe(PaynlService::PARTNER_ID);
+    expect(array_map(fn ($request) => $request->getBodyParameters()['stats']['object'], $sent))->each->toBe('TEST_PARTNER_VALUE');
+});
+
+it('leaves stats.object to the SDK when no PartnerID is configured', function () {
+    $sent = null;
+    paynlWith(function ($request) use (&$sent) {
+        $sent = $request;
+
+        return payOrder(20);
+    })->startOnlinePayment(2500, 'Webshop', 'https://shop.test/done');
+
+    expect($sent->getBodyParameters()['stats']['object'])->toStartWith('PHP-SDK');
 });

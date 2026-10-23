@@ -1,31 +1,29 @@
 # xve/laravel-paynl
 
-Laravel integration for Pay.nl, built on the official [`paynl/php-sdk`](https://github.com/paynl/php-sdk) (Order:Create / TGU API). One code base for every XVE project and package that takes Pay. payments: terminal (instore, Bancontact on the kassa) and online.
+Laravel integration for Pay.nl, built on the official [`paynl/php-sdk`](https://github.com/paynl/php-sdk) (Order:Create / TGU API): terminal (instore, Bancontact on the kassa) and online payments.
 
 ## Install
 
-Private package: not on Packagist. Add the repository to the app's `composer.json` once:
+Not on Packagist. Add the repository to the app's `composer.json` once; it is public, so Composer needs no SSH key or GitHub token:
 
 ```json
 "repositories": [
-    { "type": "vcs", "url": "git@github.com:XVE-BV/laravel-paynl.git" }
+    { "type": "vcs", "url": "https://github.com/XVE-BV/laravel-paynl" }
 ]
 ```
 
 ```bash
-composer require xve/laravel-paynl:^1.0
+composer require xve/laravel-paynl:^2.1
 php artisan vendor:publish --tag=paynl-config   # optional
 ```
 
 `paynl/php-sdk` still requires Guzzle 7. If the app is locked on Guzzle 8, add `-W` so Composer may downgrade it.
 
-Composer needs read access to the repository: an SSH key with access, or a GitHub token (`composer config --global github-oauth.github.com <token>`, or an `auth.json` on servers/CI that is not committed).
-
-Another XVE package builds on it the same way: `"xve/laravel-paynl": "^1.0"` in its own `require`, and the repository entry in the app.
+A package that builds on it adds `"xve/laravel-paynl": "^2.1"` to its own `require`; the app still needs the repository entry.
 
 ## Updates
 
-Releases are git tags (`v1.0.0`, `v1.1.0`, ...) following semver, listed in `CHANGELOG.md`. Apps update with `composer update xve/laravel-paynl`; a breaking change gets a new major (`v2.0.0`) and is only picked up after the app changes its constraint.
+Releases are git tags (`v2.0.0`, `v2.1.0`, ...) following semver, listed in `CHANGELOG.md`. Apps update with `composer update xve/laravel-paynl`; a breaking change gets a new major (`v3.0.0`) and is only picked up after the app changes its constraint.
 
 ## Configure
 
@@ -35,7 +33,7 @@ PAYNL_API_TOKEN=                # API token next to it
 PAYNL_SERVICE_ID=SL-####-####   # sales location
 PAYNL_SERVICE_SECRET=           # only when Pay. signs the exchange with the sales location secret
 PAYNL_TESTMODE=false
-PAYNL_STATS_OBJECT=             # leave empty: every order sends XVE's PartnerID (PaynlService::PARTNER_ID)
+PAYNL_STATS_OBJECT=             # your PartnerID at Pay. (TEST_PARTNER_VALUE during the certification)
 PAYNL_STATS_TOOL=               # defaults to APP_NAME
 PAYNL_CORE=                     # optional, e.g. https://connect.payments.nl when connect.pay.nl is down
 ```
@@ -92,7 +90,7 @@ Call `verifyPaid()` before booking anything: it asks Pay. itself instead of trus
 
 Once the terminal is done, `Payment::$receipt` holds the card receipt: `lines` (as the terminal prints it), `text()`, `ticketData` (the same as separate fields), `authorizationCode` and `signatureRequired` (the customer signs the merchant copy). Pay. requires the kassa to offer it after a successful payment: print it, show it or mail it.
 
-`PaymentStatus` is one of `pending`, `verify` (held by Pay.'s fraud check: tell the customer the order is received, do not ship until `approve()`), `authorized`, `paid`, `cancelled` (also expired and failed), `partially_refunded`, `refunded`, `chargeback`. `Payment::$statusCode` keeps the raw Pay. code. Every order carries the `stats` block Pay. needs for certification: `object` is XVE's PartnerID (`PaynlService::PARTNER_ID`, the same in every project), `tool` the app name.
+`PaymentStatus` is one of `pending`, `verify` (held by Pay.'s fraud check: tell the customer the order is received, do not ship until `approve()`), `authorized`, `paid`, `cancelled` (also expired and failed), `partially_refunded`, `refunded`, `chargeback`. `Payment::$statusCode` keeps the raw Pay. code. Every order carries the `stats` block Pay. needs for certification: `object` is your PartnerID (`PAYNL_STATS_OBJECT`, the same in every project of yours; empty leaves the SDK's own value), `tool` the app name.
 
 ## Exchange (webhook)
 
@@ -174,5 +172,5 @@ Each scenario prints the status, `failureReason` and receipt; that is what the k
 ## Going live
 
 - Sales location on LIVE at Pay., `PAYNL_TESTMODE=false`, live credentials.
-- POS certification with Pay. done (see [CERTIFICATION.md](CERTIFICATION.md)), and a release of this package with the PartnerID Pay. handed out in `PaynlService::PARTNER_ID` (now still `TEST_PARTNER_VALUE`).
+- POS certification with Pay. done (see [CERTIFICATION.md](CERTIFICATION.md)), and the PartnerID Pay. handed out in `PAYNL_STATS_OBJECT`.
 - `APP_URL` is the public https url, so the exchange url in every order reaches the app.

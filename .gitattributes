@@ -1,0 +1,8 @@
+# Left out of the dist zip Composer installs in an app
+/.github            export-ignore
+/tests              export-ignore
+/.env.sandbox.example export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/phpunit.xml.dist   export-ignore
+/CERTIFICATION.md   export-ignore

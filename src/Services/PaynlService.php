@@ -43,13 +43,6 @@ class PaynlService implements PaymentGateway
      */
     public const TERMINAL_REFUND_METHOD = 2351;
 
-    /**
-     * XVE's PartnerID at Pay., sent as stats.object on every order of every project so Pay. can
-     * trace them to this integration. TEST_PARTNER_VALUE (what Pay.'s certification test case 5
-     * expects) until the certification hands out the real one; then it goes here, in a new release.
-     */
-    public const PARTNER_ID = 'TEST_PARTNER_VALUE';
-
     private const SIGNATURE_ALGORITHMS = ['sha256', 'sha512'];
 
     public function __construct(private readonly array $config) {}

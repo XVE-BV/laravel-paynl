@@ -2,12 +2,14 @@
 
 All notable changes, per release tag. Follows [semver](https://semver.org): patch = fix, minor = new feature (backwards compatible), major = breaking change.
 
-## Unreleased
+## 2.1.0
 
 - `TerminalPayments` for a kassa: start a terminal payment once per reference (refuses unknown, offline and inactive terminals, says when the terminal is busy), follow it with a `TerminalPaymentStatus` (`final`, a message per outcome in Dutch and English, `pollAfterMs`), stop it after `paynl.terminal.timeout`, cancel from the kassa, and `book()` it exactly once after Pay. confirms the amount.
 - `TerminalPaymentPaid`: fired as the cashier who started it when the exchange reports a terminal payment as paid that is not booked yet. Running terminal payments are only kept in the cache (`paynl.terminal.remember`), no tables.
 - `TerminalPaymentException`, rendered as JSON with the message for the cashier.
 - `Receipt::printLines()`: the receipt with a merchant copy to sign when the terminal asks for a signature.
+- Public repository under the MIT license: the `repositories` entry uses `https://github.com/XVE-BV/laravel-paynl` and apps drop the GitHub token.
+- `stats.object` only comes from `PAYNL_STATS_OBJECT`: the hard-coded `PaynlService::PARTNER_ID` (still `TEST_PARTNER_VALUE`) is gone, so other users of the package never send XVE's PartnerID. XVE projects set `PAYNL_STATS_OBJECT`.
 
 ## 2.0.0
 

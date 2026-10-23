@@ -45,7 +45,7 @@ final class Sandbox
             'paynl.api_token' => self::env('PAYNL_SANDBOX_API_TOKEN'),
             'paynl.service_id' => self::env('PAYNL_SANDBOX_SERVICE_ID'),
             'paynl.testmode' => filter_var(self::env('PAYNL_SANDBOX_TESTMODE', 'true'), FILTER_VALIDATE_BOOL),
-            'paynl.stats.object' => self::env('PAYNL_SANDBOX_STATS_OBJECT', PaynlService::PARTNER_ID),
+            'paynl.stats.object' => self::env('PAYNL_SANDBOX_STATS_OBJECT', 'TEST_PARTNER_VALUE'),
             'paynl.stats.tool' => 'laravel-paynl sandbox tests',
         ]);
 

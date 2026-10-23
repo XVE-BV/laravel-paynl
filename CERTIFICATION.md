@@ -1,6 +1,6 @@
 # Pay. certification run book
 
-Pay. certifies an integration (the kassa or webshop built on this package), not the package itself. XVE certifies once as a partner, with one app on its own Pay. test account. Every order already sends `PaynlService::PARTNER_ID` as `stats.object`: `TEST_PARTNER_VALUE` (what Pay. expects in the tests) until Pay. hands out the real PartnerID.
+Pay. certifies an integration (the kassa or webshop built on this package), not the package itself. XVE certifies once as a partner, with one app on its own Pay. test account. Every order sends `PAYNL_STATS_OBJECT` as `stats.object`: `TEST_PARTNER_VALUE` (what Pay. expects in the tests) until Pay. hands out the real PartnerID.
 
 Sources: [certification](https://developer.pay.nl/docs/certification), [test your integration](https://developer.pay.nl/docs/testing-your-integration), [Cloud Connect validation checklist](https://support.pay.nl/en/knowledge/pay-pos-cloudconnect-validation-checklist), [partner registration](https://developer.pay.nl/docs/registration).
 
@@ -49,7 +49,7 @@ The package provides the data; the app has to use it:
 - Retrying after a failure starts a new payment; a double click never starts two.
 - With more than one terminal, the cashier picks one from `listTerminals()` (only `usable` ones), and the payment goes to that terminal.
 - Online orders in `verify`: lower the stock and tell the customer the order is received, not paid. On `decline()`: mail the customer and put the stock back. On `approve()`: ready to ship.
-- `stats.object` is the same on every order: the package sends `PaynlService::PARTNER_ID`; leave `PAYNL_STATS_OBJECT` empty.
+- `stats.object` is the same on every order: `PAYNL_STATS_OBJECT` is set to the PartnerID.
 - The cashiers know how to switch a terminal to another core in an outage, and the app has `PAYNL_CORE` for the gateway.
 
 ## 4. Send Pay. the evidence
@@ -59,5 +59,5 @@ The package provides the data; the app has to use it:
 
 ## 5. After the certification
 
-- Put the PartnerID in `PaynlService::PARTNER_ID`, tag a release and `composer update xve/laravel-paynl` in every project. Projects set nothing themselves.
+- Put the PartnerID in `PAYNL_STATS_OBJECT` of every project.
 - Ask Pay. whether another app built on the package (a second kassa, a webshop) needs its own certification or falls under the same integration.

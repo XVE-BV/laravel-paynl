@@ -2,7 +2,8 @@
     "name": "xve/laravel-paynl",
     "description": "Laravel integration for Pay.nl online and terminal (instore) payments",
     "keywords": ["xve", "laravel", "paynl", "pay.nl", "payments", "bancontact", "terminal"],
-    "license": "proprietary",
+    "homepage": "https://github.com/XVE-BV/laravel-paynl",
+    "license": "MIT",
     "authors": [
         {
             "name": "Robbe",
@@ -10,6 +11,11 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/XVE-BV/laravel-paynl/issues",
+        "source": "https://github.com/XVE-BV/laravel-paynl",
+        "security": "https://github.com/XVE-BV/laravel-paynl/security/advisories/new"
+    },
     "require": {
         "php": "^8.2",
         "guzzlehttp/guzzle": "^7.0",
